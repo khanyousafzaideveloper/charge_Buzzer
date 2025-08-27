@@ -2,16 +2,17 @@
 plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.kotlinAndroid)
+    alias(libs.plugins.kotlin.compose)
 }
 
 android {
     namespace = "com.example.charge_buzzer"
-    compileSdk = 34
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.example.charge_buzzer"
         minSdk = 24
-        targetSdk = 34
+        targetSdk = 36
         versionCode = 1
         versionName = "1.0"
 
@@ -41,7 +42,7 @@ android {
         compose = true
     }
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.4.3"
+      //  kotlinCompilerExtensionVersion = "1.4.3"
     }
     packaging {
         resources {
@@ -61,7 +62,16 @@ dependencies {
     implementation(libs.ui.tooling.preview)
     implementation(libs.material3)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
+
+    implementation ("androidx.compose.ui:ui:1.9.0")
+    implementation ("androidx.compose.material3:material3:1.3.2")
+    implementation ("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.1")
+    implementation ("androidx.activity:activity-compose:1.7.2")
+    runtimeOnly("androidx.compose.material:material-icons-extended:1.7.8")
+
     testImplementation(libs.junit)
+
+
     androidTestImplementation(libs.androidx.test.ext.junit)
     androidTestImplementation(libs.espresso.core)
     androidTestImplementation(platform(libs.compose.bom))

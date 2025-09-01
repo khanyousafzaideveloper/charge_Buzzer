@@ -67,7 +67,7 @@ dependencies {
     implementation ("androidx.compose.material3:material3:1.3.2")
     implementation ("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.1")
     implementation ("androidx.activity:activity-compose:1.7.2")
-    runtimeOnly("androidx.compose.material:material-icons-extended:1.7.8")
+    runtimeOnly(libs.androidx.material.icons.extended)
 
     testImplementation(libs.junit)
 

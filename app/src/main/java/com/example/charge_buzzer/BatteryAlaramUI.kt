@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -149,7 +151,7 @@ fun BatteryAlarmApp(viewModel: BatteryViewModel) {
                 modifier = Modifier.weight(1f)
             ) {
                 Icon(
-                    Icons.Default.Check,
+                    Icons.Default.Close,
                     contentDescription = "Stop monitoring",
                     modifier = Modifier.size(18.dp)
                 )

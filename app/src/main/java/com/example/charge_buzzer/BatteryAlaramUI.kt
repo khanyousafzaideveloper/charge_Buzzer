@@ -13,8 +13,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.MailOutline
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -22,9 +26,12 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -41,25 +48,118 @@ import androidx.compose.ui.unit.sp
 
 // UI Components
 @Composable
-fun BatteryAlarmApp(viewModel: BatteryViewModel) {
+fun BatteryAlarmApp(
+    viewModel: BatteryViewModel,
+    onPickAlarmSound: () -> Unit
+) {
     var inputText by remember { mutableStateOf(viewModel.targetChargeLevel.toString()) }
+    var whatsappText by remember { mutableStateOf(viewModel.whatsappNumber) }
+    var customMessageText by remember { mutableStateOf(viewModel.customMessage) }
+    var showWhatsappSettings by remember { mutableStateOf(false) }
+    var showAlarmSettings by remember { mutableStateOf(false) }
+
+
+
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        verticalArrangement = Arrangement.Top
     ) {
         // Title
         Text(
-            text = "Battery Charge Alarm",
+            text = "Smart Battery Alarm",
             fontSize = 28.sp,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary,
             textAlign = TextAlign.Center,
-            modifier = Modifier.padding(bottom = 32.dp)
+            modifier = Modifier.padding(bottom = 24.dp)
         )
+
+        // Settings Row
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // WhatsApp Settings Button
+            Button(
+                onClick = { showWhatsappSettings = true },
+                modifier = Modifier.weight(1f),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (viewModel.whatsappEnabled) Color(0xFF25D366) else MaterialTheme.colorScheme.secondary
+                )
+            ) {
+                Icon(
+                    Icons.Default.Email,
+                    contentDescription = "WhatsApp Settings",
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("WhatsApp", fontSize = 12.sp)
+            }
+
+            // Alarm Settings Button
+            Button(
+                onClick = { onPickAlarmSound() },
+                modifier = Modifier.weight(1f),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.tertiary
+                )
+            ) {
+                Icon(
+                    Icons.Default.KeyboardArrowUp,
+                    contentDescription = "Alarm Settings",
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("Alarm", fontSize = 12.sp)
+            }
+        }
+
+        // Auto-Start Toggle Card
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = if (viewModel.autoStartEnabled)
+                    Color.Blue.copy(alpha = 0.1f)
+                else
+                    MaterialTheme.colorScheme.surfaceVariant
+            )
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "🔌 Auto-Start Monitoring",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = if (viewModel.autoStartEnabled)
+                            "Starts when charging begins"
+                        else
+                            "Manual start only",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = viewModel.autoStartEnabled,
+                    onCheckedChange = { viewModel.toggleAutoStart() }
+                )
+            }
+        }
 
         // Current Battery Status Card
         Card(
@@ -67,10 +167,10 @@ fun BatteryAlarmApp(viewModel: BatteryViewModel) {
                 .fillMaxWidth()
                 .padding(bottom = 24.dp),
             colors = CardDefaults.cardColors(
-                containerColor = if (viewModel.isCharging) {
-                    Color.Green.copy(alpha = 0.1f)
-                } else {
-                    MaterialTheme.colorScheme.surfaceVariant
+                containerColor = when {
+                    viewModel.showAlarm -> Color.Red.copy(alpha = 0.2f)
+                    viewModel.isCharging -> Color.Green.copy(alpha = 0.1f)
+                    else -> MaterialTheme.colorScheme.surfaceVariant
                 }
             )
         ) {
@@ -87,13 +187,29 @@ fun BatteryAlarmApp(viewModel: BatteryViewModel) {
                     text = "${viewModel.currentBatteryLevel}%",
                     fontSize = 36.sp,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
+                    color = when {
+                        viewModel.showAlarm -> Color.Red
+                        viewModel.isCharging -> Color.Green
+                        else -> MaterialTheme.colorScheme.primary
+                    }
                 )
-                Text(
-                    text = if (viewModel.isCharging) "⚡ Charging" else "🔋 Not Charging",
-                    fontSize = 14.sp,
-                    color = if (viewModel.isCharging) Color.Green else Color.Gray
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = if (viewModel.isCharging) "⚡ Charging" else "🔋 Not Charging",
+                        fontSize = 14.sp,
+                        color = if (viewModel.isCharging) Color.Green else Color.Gray
+                    )
+                    if (viewModel.isMonitoring) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "• Monitoring",
+                            fontSize = 12.sp,
+                            color = Color.Blue
+                        )
+                    }
+                }
             }
         }
 
@@ -101,7 +217,6 @@ fun BatteryAlarmApp(viewModel: BatteryViewModel) {
         OutlinedTextField(
             value = inputText,
             onValueChange = { newValue ->
-                // Allow empty string or valid numbers 1-100
                 if (newValue.isEmpty() || newValue.all { it.isDigit() }) {
                     val parsed = newValue.toIntOrNull()
                     if (newValue.isEmpty() || (parsed != null && parsed in 1..100)) {
@@ -118,7 +233,13 @@ fun BatteryAlarmApp(viewModel: BatteryViewModel) {
                 .fillMaxWidth()
                 .padding(bottom = 24.dp),
             singleLine = true,
-            placeholder = { Text("Enter target level") }
+            placeholder = { Text("Enter target level") },
+            trailingIcon = {
+                Text(
+                    text = "%",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         )
 
         // Control Buttons
@@ -134,12 +255,12 @@ fun BatteryAlarmApp(viewModel: BatteryViewModel) {
                 modifier = Modifier.weight(1f)
             ) {
                 Icon(
-                    Icons.Default.Star,
+                    Icons.Default.PlayArrow,
                     contentDescription = "Start monitoring",
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Start Monitoring")
+                Text("Start Manual")
             }
 
             Button(
@@ -160,144 +281,152 @@ fun BatteryAlarmApp(viewModel: BatteryViewModel) {
             }
         }
 
-        // Status Text
+        // Status Messages
+        Spacer(modifier = Modifier.height(16.dp))
+
         if (viewModel.isMonitoring) {
-            Text(
-                text = "🔍 Monitoring for ${viewModel.targetChargeLevel}% charge level...",
-                color = Color.Green,
-                modifier = Modifier.padding(top = 16.dp),
-                textAlign = TextAlign.Center,
-                fontSize = 14.sp
-            )
-
-            if (viewModel.isCharging) {
-                Text(
-                    text = "Device is charging - alarm will trigger at target level",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 8.dp),
-                    textAlign = TextAlign.Center,
-                    fontSize = 12.sp
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color.Green.copy(alpha = 0.1f)
                 )
-            } else {
-                Text(
-                    text = "Connect charger to start monitoring",
-                    color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.padding(top = 8.dp),
-                    textAlign = TextAlign.Center,
-                    fontSize = 12.sp
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        // Instructions
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-            )
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp)
             ) {
-                Text(
-                    text = "How to use:",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    text = "1. Set your target charge level (1-100%)\n" +
-                            "2. Tap 'Start Monitoring'\n" +
-                            "3. Connect your charger\n" +
-                            "4. Alarm will sound when target is reached",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 4.dp)
-                )
-            }
-        }
-    }
-
-    // Alarm Dialog
-    if (viewModel.showAlarm) {
-        AlarmDialog(
-            targetLevel = viewModel.targetChargeLevel,
-            currentLevel = viewModel.currentBatteryLevel,
-            onDismiss = { viewModel.stopAlarm() }
-        )
-    }
-}
-
-@Composable
-fun AlarmDialog(
-    targetLevel: Int,
-    currentLevel: Int,
-    onDismiss: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(
-                text = "🔋 Battery Charged!",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center
-            )
-        },
-        text = {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = "Your battery has reached the target level!",
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(bottom = 16.dp),
-                    fontSize = 16.sp
-                )
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
+                Column(
+                    modifier = Modifier.padding(16.dp)
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "🔍 Monitoring for ${viewModel.targetChargeLevel}% charge level...",
+                        color = Color.Green,
+                        textAlign = TextAlign.Center,
+                        fontSize = 14.sp,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    if (viewModel.whatsappEnabled && viewModel.whatsappNumber.isNotEmpty()) {
                         Text(
-                            text = "Target",
+                            text = "📱 WhatsApp message will be sent to ${viewModel.whatsappNumber}",
+                            color = Color(0xFF25D366),
+                            textAlign = TextAlign.Center,
                             fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = "$targetLevel%",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            text = "Current",
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = "$currentLevel%",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.Green
+                            modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
                         )
                     }
                 }
             }
-        },
-        confirmButton = {
-            Button(
-                onClick = onDismiss,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary
+        } else if (viewModel.autoStartEnabled) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color.Blue.copy(alpha = 0.1f)
                 )
             ) {
-                Text("Turn Off Alarm")
+                Text(
+                    text = "⚡ Auto-start enabled - Will monitor when charging begins",
+                    color = Color.Blue,
+                    modifier = Modifier.padding(16.dp),
+                    textAlign = TextAlign.Center,
+                    fontSize = 14.sp
+                )
             }
         }
-    )
+    }
+
+    // WhatsApp Settings Dialog
+    if (showWhatsappSettings) {
+        AlertDialog(
+            onDismissRequest = {
+                showWhatsappSettings = false
+                whatsappText = viewModel.whatsappNumber
+                customMessageText = viewModel.customMessage
+            },
+            title = {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Default.MailOutline,
+                        contentDescription = "WhatsApp",
+                        tint = Color(0xFF25D366),
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("WhatsApp Settings")
+                }
+            },
+            text = {
+                Column {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("Enable WhatsApp Message")
+                        Switch(
+                            checked = viewModel.whatsappEnabled,
+                            onCheckedChange = { viewModel.toggleWhatsapp() }
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    OutlinedTextField(
+                        value = whatsappText,
+                        onValueChange = { whatsappText = it },
+                        label = { Text("WhatsApp Number") },
+                        placeholder = { Text("+1234567890") },
+                        enabled = viewModel.whatsappEnabled,
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone)
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    OutlinedTextField(
+                        value = customMessageText,
+                        onValueChange = { customMessageText = it },
+                        label = { Text("Custom Message") },
+                        placeholder = { Text("Use [LEVEL] for battery percentage") },
+                        enabled = viewModel.whatsappEnabled,
+                        modifier = Modifier.fillMaxWidth(),
+                        maxLines = 3
+                    )
+
+                    if (viewModel.whatsappEnabled && viewModel.whatsappNumber.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Button(
+                            onClick = { viewModel.testWhatsApp() },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFF25D366)
+                            )
+                        ) {
+                            Text("Test WhatsApp Message")
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.updateWhatsappNumber(whatsappText)
+                        viewModel.updateCustomMessage(customMessageText)
+                        showWhatsappSettings = false
+                    }
+                ) {
+                    Text("Save")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showWhatsappSettings = false
+                        whatsappText = viewModel.whatsappNumber
+                        customMessageText = viewModel.customMessage
+                    }
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 }

@@ -67,6 +67,8 @@ dependencies {
     implementation ("androidx.compose.material3:material3:1.3.2")
     implementation ("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.1")
     implementation ("androidx.activity:activity-compose:1.7.2")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1")
     runtimeOnly(libs.androidx.material.icons.extended)
 
     testImplementation(libs.junit)

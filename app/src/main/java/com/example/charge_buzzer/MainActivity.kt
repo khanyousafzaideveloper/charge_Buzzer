@@ -5,20 +5,25 @@ import android.Manifest
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.ManagedActivityResultLauncher
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import com.example.charge_buzzer.ui.theme.Charge_BuzzerTheme
 
 class MainActivity : ComponentActivity() {
-    private lateinit var batteryReceiver: BatteryReceiver
+    private lateinit var batteryReceiver: ChargingAutoStartReceiver
     private lateinit var viewModel: BatteryViewModel
 
     private val notificationPermissionLauncher = registerForActivityResult(
@@ -44,15 +49,20 @@ class MainActivity : ComponentActivity() {
         }
 
         viewModel = BatteryViewModel(this)
-        batteryReceiver = BatteryReceiver(viewModel)
+        batteryReceiver = ChargingAutoStartReceiver(viewModel)
 
         setContent {
             Charge_BuzzerTheme {
+                val soundPickerLauncher = rememberSoundPickerLauncher { uri ->
+                    viewModel.setCustomAlarmSound(uri.toString())
+                }
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    BatteryAlarmApp(viewModel)
+                    BatteryAlarmApp(viewModel){
+                        soundPickerLauncher.launch(arrayOf("audio/*"))
+                    }
                 }
             }
         }
@@ -79,22 +89,26 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-      //  viewModel.cleanup()
+       // viewModel.cleanup()
     }
+}
 
-    private fun startBatteryService() {
-        val serviceIntent = Intent(this, BatteryMonitoringService::class.java)
-        serviceIntent.putExtra("target_level", viewModel.targetChargeLevel)
+@Composable
+fun rememberSoundPickerLauncher(
+    onUriPicked: (Uri) -> Unit
+): ManagedActivityResultLauncher<Array<String>, Uri?> {
+    val context = LocalContext.current
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForegroundService(serviceIntent)
-        } else {
-            startService(serviceIntent)
+    return rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
+        uri?.let {
+            // Persist permission so we can reuse later
+            context.contentResolver.takePersistableUriPermission(
+                it,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION
+            )
+            onUriPicked(it)
         }
-    }
-
-    private fun stopBatteryService() {
-        val serviceIntent = Intent(this, BatteryMonitoringService::class.java)
-        stopService(serviceIntent)
     }
 }

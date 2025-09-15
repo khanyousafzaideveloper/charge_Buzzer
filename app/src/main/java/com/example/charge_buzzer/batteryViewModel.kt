@@ -186,17 +186,18 @@ class BatteryViewModel(private val context: Context) : ViewModel() {
     private fun triggerAlarm() {
         showAlarm = true
         alarmManager.startAlarm(selectedAlarmType, customAlarmUri)
-        isMonitoring = false
+      //  isMonitoring = false
 
         // Send WhatsApp message if enabled
         if (whatsappEnabled && whatsappNumber.isNotEmpty()) {
-            sendWhatsAppMessage(
-                token = "EAAaIIkhZBC2EBPRcaWjcwRAz8VS61a1uxjwlA5gBjXKc57m0MCzW31qGfMO1rkkTPGM8lQblpkOp1vWeQQ9ZA2jlG6XUk15ivvfUWVmLQa97MhpVzKr08RszyZAx0IHwjhItMZAf1mWnUGRNjlkZBiB9UOoiUvZBXFg7uHJAHWrxCkFZBc8MRdTkZBJwYqe7aixrufZAy4BNtCRpR5eTGP4GtqZBTuSCF1vlcxEVLZAe3owB0ilHwZDZD",
-                phoneNumberId = "813935998465997",
-                to =  whatsappNumber,
-                currentBatteryLevel = currentBatteryLevel,
-                customMessage =  customMessage.replace("[LEVEL]", currentBatteryLevel.toString())
-            )
+            notifyLaptop(customMessage.replace("[Level]", currentBatteryLevel.toString()))
+//            sendWhatsAppMessage(
+//                token = "EAAaIIkhZBC2EBPZAKvn3ngOLt6xOIaaVH0SBeU3sjaZAT1yEmHZB3s1OZAEgd653zj0gRHHCsR5dGJshz7Q1HmoDpKiBbO80ZC3vrvYCZB2qVtW8KRkHKapqadUWuJb2E29qctnZBY16IuaKqZAx5R9dEr6IPmqpI4HqZADCG8ZCMpWsN1GzK4EFcchNtjSmIXS3Vh4ZCuGKDhGBhY1wMseonPFZCS4eLXKX0xpln5uZAIhZBi3OJPLyZAMZD",
+//                phoneNumberId = "813935998465997",
+//                to =  "92$whatsappNumber",
+//                currentBatteryLevel = currentBatteryLevel,
+//                customMessage =  customMessage.replace("[LEVEL]", currentBatteryLevel.toString())
+//            )
         }
     }
 
@@ -231,54 +232,34 @@ class BatteryViewModel(private val context: Context) : ViewModel() {
 //            e.printStackTrace()
 //        }
 //    }
-private fun sendWhatsAppMessage(
-    token: String,
-    phoneNumberId: String,
-    to: String,
-    customMessage: String,
-    currentBatteryLevel: Int
-) {
-    val client = OkHttpClient()
-    val TAG = "WhatsAppAPI"
+//private fun sendWhatsAppMessage(
+//    token: String,
+//    phoneNumberId: String,
+//    to: String,
+//    customMessage: String,
+//    currentBatteryLevel: Int
+//) {
+    private fun notifyLaptop(message: String) {
+        val client = OkHttpClient()
+        val url = "http://192.168.18.16:5000/message?text=${Uri.encode(message)}"
 
-    val message = customMessage.replace("[LEVEL]", currentBatteryLevel.toString())
+        val request = Request.Builder()
+            .url(url)
+            .get()
+            .build()
 
-    val json = """
-        {
-          "messaging_product": "whatsapp",
-          "to": "$to",
-          "type": "text",
-          "text": { "body": "$message" }
-        }
-    """.trimIndent()
-
-    Log.d(TAG, "🚀 Sending WhatsApp message...")
-    Log.d(TAG, "➡️ To: $to")
-    Log.d(TAG, "➡️ PhoneNumberId: $phoneNumberId")
-    Log.d(TAG, "➡️ Message: $message")
-
-    val body = json.toRequestBody("application/json".toMediaType())
-    val request = Request.Builder()
-        .url("https://graph.facebook.com/v19.0/$phoneNumberId/messages")
-        .post(body)
-        .addHeader("Authorization", "Bearer $token")
-        .addHeader("Content-Type", "application/json")
-        .build()
-
-    client.newCall(request).enqueue(object : Callback {
-        override fun onFailure(call: okhttp3.Call, e: IOException) {
-            Log.e(TAG, "❌ Request failed: ${e.localizedMessage}", e)
-        }
-
-        override fun onResponse(call: okhttp3.Call, response: Response) {
-            response.use {
-                val respBody = it.body?.string()
-                Log.d(TAG, "✅ Response code: ${it.code}")
-                Log.d(TAG, "✅ Response body: $respBody")
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                Log.e("LaptopNotify", "❌ Failed: ${e.localizedMessage}")
             }
-        }
-    })
-}
+
+            override fun onResponse(call: Call, response: Response) {
+                val body = response.body?.string()
+                Log.d("LaptopNotify", "✅ Sent to laptop: $body")
+            }
+        })
+    }
+//}
  //   }
 
     fun testWhatsApp() {
